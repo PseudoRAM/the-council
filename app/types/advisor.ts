@@ -1,4 +1,4 @@
-export type AdvisorType = 'historical' | 'archetypal' | 'fictional' | 'other';
+export type AdvisorType = 'historical' | 'archetypal' | 'fictional' | 'current';
 
 export type Advisor = {
   id: string;

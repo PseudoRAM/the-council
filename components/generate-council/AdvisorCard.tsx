@@ -38,7 +38,7 @@ export const AdvisorCard = ({ advisor, isSelected, onSelect }: AdvisorCardProps)
                   ${advisor.type === 'historical' && 'bg-blue-100 text-blue-800'}
                   ${advisor.type === 'fictional' && 'bg-purple-100 text-purple-800'}
                   ${advisor.type === 'archetypal' && 'bg-green-100 text-green-800'}
-                  ${advisor.type === 'other' && 'bg-gray-100 text-gray-800'}
+                  ${advisor.type === 'current' && 'bg-yellow-100 text-yellow-800'}
                   capitalize
                 `}
               >
