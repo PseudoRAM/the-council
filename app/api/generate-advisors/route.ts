@@ -74,7 +74,7 @@ Your response MUST be formatted as a valid JSON object with the following struct
     {
       "name": "Advisor Name",
       "description": "A short description of the advisor",
-      "type": "historical|archetypal|fictional|personal",
+      "type": "historical|archetypal|fictional|current",
       "why": "Explanation of why this advisor would be beneficial",
       "traditions": "the traditions or concepts that the advisor embodies",
       "speakingStyle": "the voice and speaking style of the advisor",
@@ -86,7 +86,7 @@ Your response MUST be formatted as a valid JSON object with the following struct
   `;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [{
         role: 'user',
@@ -137,9 +137,10 @@ Your response MUST be formatted as a valid JSON object with the following struct
         }
       }));
 
-      const { error: dbError } = await supabase
+      const { data: insertedMembers, error: dbError } = await supabase
         .from('council_members')
-        .insert(councilMembers);
+        .insert(councilMembers)
+        .select();
 
       if (dbError) {
         console.error('Database insertion error:', dbError);
@@ -149,8 +150,12 @@ Your response MUST be formatted as a valid JSON object with the following struct
         );
       }
 
-      // Keep original response
-      return NextResponse.json(advisorsData);
+      // Return both the AI response and the inserted database rows
+      console.log('council members', insertedMembers, advisorsData)
+      return NextResponse.json({
+        ...advisorsData,
+        councilMembers: insertedMembers
+      });
     } catch (parseError) {
       console.error('JSON Parse Error:', 
         response.content[0]?.type === 'text' ? response.content[0].text : 'No text content'
