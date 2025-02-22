@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Mic } from "lucide-react"; // Add this import at the top
+import { useRecordVoice } from "@/hooks/use-record-voice";
 
 export function PlaceholderInput({
   placeholders,
@@ -15,6 +16,9 @@ export function PlaceholderInput({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
+  const [isListening, setIsListening] = useState(false);
+
+  const { startRecording, stopRecording, text } = useRecordVoice();
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startAnimation = () => {
@@ -175,113 +179,150 @@ export function PlaceholderInput({
     vanishAndSubmit();
     onSubmit && onSubmit(e);
   };
+
+  useEffect(() => {
+    if (text && inputRef.current) {
+      setValue(text);
+      const event = new Event("change", { bubbles: true });
+      Object.defineProperty(event, "target", {
+        value: inputRef.current,
+        enumerable: true,
+      });
+      onChange &&
+        onChange(event as unknown as React.ChangeEvent<HTMLInputElement>);
+    }
+  }, [text, onChange]);
+
   return (
-    <form
-      className={cn(
-        "w-full relative max-w-xl mx-auto bg-white dark:bg-zinc-800 h-12 rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
-        value && "bg-gray-50"
-      )}
-      onSubmit={handleSubmit}
-    >
-      <canvas
+    <div>
+      <form
         className={cn(
-          "absolute pointer-events-none  text-base transform scale-50 top-[20%] left-2 sm:left-8 origin-top-left filter invert dark:invert-0 pr-20",
-          !animating ? "opacity-0" : "opacity-100"
+          "w-full relative max-w-xl mx-auto bg-white dark:bg-zinc-800 min-h-[3rem] rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
+          value && "bg-gray-50"
         )}
-        ref={canvasRef}
-      />
-      <input
-        onChange={(e) => {
-          if (!animating) {
-            setValue(e.target.value);
-            onChange && onChange(e);
-          }
-        }}
-        onKeyDown={handleKeyDown}
-        ref={inputRef}
-        value={value}
-        type="text"
-        className={cn(
-          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-12 sm:pl-16 pr-20",
-          animating && "text-transparent dark:text-transparent"
-        )}
-      />
-
-      <button
-        type="button"
-        onClick={() => {
-          // TODO: Add mic functionality here
-        }}
-        className="absolute left-1 sm:left-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full bg-black dark:bg-zinc-900 transition duration-200 flex items-center justify-center hover:bg-gray-800"
+        onSubmit={handleSubmit}
       >
-        <Mic className="text-gray-300 h-4 w-4" />
-      </button>
+        <canvas
+          className={cn(
+            "absolute pointer-events-none text-base transform scale-50 top-[20%] left-2 sm:left-8 origin-top-left filter invert dark:invert-0 pr-20",
+            !animating ? "opacity-0" : "opacity-100"
+          )}
+          ref={canvasRef}
+        />
+        <textarea
+          onChange={(e) => {
+            if (!animating) {
+              setValue(e.target.value);
+              onChange &&
+                onChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
+              e.target.style.height = "inherit";
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }
+          }}
+          onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if (e.key === "Enter" && !animating) {
+              vanishAndSubmit();
+            }
+          }}
+          ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+          value={value}
+          rows={1}
+          className={cn(
+            "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black rounded-full focus:outline-none focus:ring-0 pl-12 sm:pl-16 pr-20 py-3 resize-none overflow-hidden",
+            animating && "text-transparent dark:text-transparent"
+          )}
+          style={{
+            minHeight: "3rem",
+          }}
+        />
 
-      <button
-        disabled={!value}
-        type="submit"
-        className="absolute right-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full disabled:bg-gray-100 bg-black dark:bg-zinc-900 dark:disabled:bg-zinc-800 transition duration-200 flex items-center justify-center"
-      >
-        <motion.svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-gray-300 h-4 w-4"
+        <button
+          type="button"
+          onClick={() => {
+            if (isListening) {
+              stopRecording();
+              setIsListening(false);
+            } else {
+              startRecording();
+              setIsListening(true);
+            }
+          }}
+          className={cn(
+            "absolute left-1 sm:left-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full transition duration-200 flex items-center justify-center",
+            isListening
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-black dark:bg-zinc-900 hover:bg-gray-800"
+          )}
         >
-          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-          <motion.path
-            d="M5 12l14 0"
-            initial={{
-              strokeDasharray: "50%",
-              strokeDashoffset: "50%",
-            }}
-            animate={{
-              strokeDashoffset: value ? 0 : "50%",
-            }}
-            transition={{
-              duration: 0.3,
-              ease: "linear",
-            }}
-          />
-          <path d="M13 18l6 -6" />
-          <path d="M13 6l6 6" />
-        </motion.svg>
-      </button>
+          <Mic className="text-gray-300 h-4 w-4" />
+        </button>
 
-      <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
-        <AnimatePresence mode="wait">
-          {!value && (
-            <motion.p
+        <button
+          disabled={!value}
+          type="submit"
+          className="absolute right-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full disabled:bg-gray-100 bg-black dark:bg-zinc-900 dark:disabled:bg-zinc-800 transition duration-200 flex items-center justify-center"
+        >
+          <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-gray-300 h-4 w-4"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <motion.path
+              d="M5 12l14 0"
               initial={{
-                y: 5,
-                opacity: 0,
+                strokeDasharray: "50%",
+                strokeDashoffset: "50%",
               }}
-              key={`current-placeholder-${currentPlaceholder}`}
               animate={{
-                y: 0,
-                opacity: 1,
-              }}
-              exit={{
-                y: -15,
-                opacity: 0,
+                strokeDashoffset: value ? 0 : "50%",
               }}
               transition={{
                 duration: 0.3,
                 ease: "linear",
               }}
-              className="dark:text-zinc-500 text-sm sm:text-base font-normal text-neutral-500 pl-12 sm:pl-16 text-left w-[calc(100%-2rem)] truncate"
-            >
-              {placeholders[currentPlaceholder]}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
-    </form>
+            />
+            <path d="M13 18l6 -6" />
+            <path d="M13 6l6 6" />
+          </motion.svg>
+        </button>
+
+        <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
+          <AnimatePresence mode="wait">
+            {!value && (
+              <motion.p
+                initial={{
+                  y: 5,
+                  opacity: 0,
+                }}
+                key={`current-placeholder-${currentPlaceholder}`}
+                animate={{
+                  y: 0,
+                  opacity: 1,
+                }}
+                exit={{
+                  y: -15,
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 0.3,
+                  ease: "linear",
+                }}
+                className="dark:text-zinc-500 text-sm sm:text-base font-normal text-neutral-500 pl-12 sm:pl-16 text-left w-[calc(100%-2rem)] truncate"
+              >
+                {placeholders[currentPlaceholder]}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+      </form>
+    </div>
   );
 }
