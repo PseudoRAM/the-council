@@ -1,106 +1,111 @@
+import { createClient } from '@/utils/supabase/server'
 import { openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
-import { responseSchema } from "./schema";
-
-const SAMPLE_COUNCIL = [
-  {
-    id: "1",
-    name: "Aristotle",
-    image: "/samples/head1.jpg",
-    why: "Renowned for his foundational contributions to Western philosophy, logic, and science, Aristotle offers timeless wisdom and a systematic approach to understanding the world.",
-    traditions:
-      "Grounded in classical Greek philosophy, emphasizing empirical observation, virtue ethics, and the pursuit of eudaimonia (flourishing).",
-    speakingStyle:
-      "Methodical, analytical, and didactic, often using syllogisms and examples from nature to explain complex ideas.",
-    bestSuitedFor:
-      "Advising on ethics, decision-making frameworks, and structuring knowledge for practical application.",
-  },
-  {
-    id: "2",
-    name: "Albert Einstein",
-    image: "/samples/head2.jpg",
-    why: "A revolutionary physicist whose theories of relativity transformed our understanding of space, time, and the universe, Einstein brings creativity and bold intellectual leaps.",
-    traditions:
-      "Rooted in modern science, with a blend of theoretical physics, skepticism of dogma, and a humanistic appreciation for wonder and curiosity.",
-    speakingStyle:
-      "Thoughtful, imaginative, and occasionally playful, often weaving metaphors like 'riding a beam of light' to clarify abstract concepts.",
-    bestSuitedFor:
-      "Solving complex problems in science, innovation, and exploring the implications of cutting-edge ideas.",
-  },
-  {
-    id: "3",
-    name: "Nikola Tesla",
-    image: "/samples/head3.jpg",
-    why: "A visionary inventor and electrical engineering genius, Tesla's foresight in technology and energy systems makes him a pioneer of practical and futuristic solutions.",
-    traditions:
-      "Influenced by 19th-century engineering, experimental science, and a belief in the transformative power of electricity and wireless communication.",
-    speakingStyle:
-      "Intense, visionary, and occasionally cryptic, with a tendency to focus on technical precision and bold predictions.",
-    bestSuitedFor:
-      "Offering insights on technological innovation, energy solutions, and pushing the boundaries of what's possible.",
-  },
-];
+import { responseSchema, CouncilMember } from "./schema";
+import { NextResponse } from 'next/server';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { message, messages } = await req.json();
+  try {
+    // Initialize Supabase client
+    const supabase = await createClient();
 
-  // get the id and name from the sample council
-  const council = SAMPLE_COUNCIL.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
+    // Get the current user's session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const result = streamObject({
-    model: openai("gpt-4o-mini"),
-    prompt: `
-      You are a council of three distinct advisors, each bringing your own wisdom and perspective to a shared dialogue with a single person (me). Together your role in this exchange is to open up new possibilities for insight and understanding.
-      The dialogue may unfold from any starting point - a question I bring, a recent experience, an emerging insight, or a theme for exploration. You will engage both with me and with each other, maintaining your distinctive voices while allowing the conversation to develop organically.
-      
-      You are here to make novel connections, aid meaning-making, and help me explore unconsidered options for action. You may offer specific suggestions when naturally relevant, but you avoid rushing to solutions at the expense of deeper understanding. Each of you brings your own form of wisdom, sometimes harmonizing and sometimes creating productive tension. You can talk multiple times to each other to formulate ideas based on each other's insights.
+    // Fetch active council members for the current user
+    const { data: councilMembers, error: fetchError } = await supabase
+      .from('council_members')
+      .select('id, name, image_url, reason, description, character_type')
+      .eq('user_id', session.user.id)
+      .eq('is_active', true);
 
-      [ADVISORS]
-      Advisor Details:
-      ${council.map(
-        (c) =>
+    if (fetchError) {
+      console.error('Error fetching council members:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch council members' }, { status: 500 });
+    }
+
+    if (!councilMembers || councilMembers.length === 0) {
+      return NextResponse.json({ error: 'No active council members found' }, { status: 404 });
+    }
+
+    // Get message data from request
+    const { message, messages } = await req.json();
+
+    // Map council members to the format needed for the prompt
+    const council = councilMembers.map((member) => ({
+      id: member.id,
+      name: member.name,
+      description: member.description || '',
+      character_type: member.character_type || '',
+      reason: member.reason || '',
+    }));
+
+    const { data: userSurveyResponse, error: userSurveyResponseError } = await supabase
+      .from('user_survey_responses')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+
+    const result = streamObject({
+      model: openai("gpt-4o-mini"),
+      prompt: `
+        You are a council of advisors, each bringing your own wisdom and perspective to a shared dialogue with a single person (me). Together your role in this exchange is to open up new possibilities for insight and understanding.
+        The dialogue may unfold from any starting point - a question I bring, a recent experience, an emerging insight, or a theme for exploration. You will engage both with me and with each other, maintaining your distinctive voices while allowing the conversation to develop organically.
+        
+        You are here to make novel connections, aid meaning-making, and help me explore unconsidered options for action. You may offer specific suggestions when naturally relevant, but you avoid rushing to solutions at the expense of deeper understanding.
+
+        Here is the user's survey response that provides more context about who they are and what they are seeking:
+        ${userSurveyResponse?.response || ''}
+
+        [ADVISORS]
+        Advisor Details:
+        ${council.map(
+          (c) =>
+            `
+            AdvisorId: ${c.id}
+            Name: ${c.name}
+            Description: ${c.description}
+            Type: ${c.character_type}
+            Why: ${c.reason}
+            `
+        )}
+
+        ${
+          messages &&
           `
-              AdvisorId: ${c.id}:
-              Name: ${c.name}
-              Why: ${SAMPLE_COUNCIL.find((c) => c.id === c.id)?.why}
-              Traditions: ${SAMPLE_COUNCIL.find((c) => c.id === c.id)?.traditions}
-              Speaking Style: ${SAMPLE_COUNCIL.find((c) => c.id === c.id)?.speakingStyle}
-              Best Suited For: ${SAMPLE_COUNCIL.find((c) => c.id === c.id)?.bestSuitedFor}
-
-              `
-      )}
-
-      ${
-        messages &&
-        `
-      [CONVERSATION SO FAR]
-      ${messages.map(
-        (m: any) =>
+        [CONVERSATION SO FAR]
+        ${messages.map(
+          (m: any) =>
+            `
+            ${m.advisorId ? `AdvisorId: ${m.advisorId}` : "User"}
+            Message: ${m.message}
           `
-          ${m.advisorId ? `AdvisorId: ${m.advisorId}` : "User"}
-          Message: ${m.message}
+        )}
         `
-      )}
-      `
-      }
+        }
 
-      [BEGIN CONVERSATION]
- 
-      Hello esteemed advisors. I seek your council.
-      
-      ${message}
-    `,
-    schema: responseSchema,
-    onFinish({ object }) {
-      // save object to database
-    },
-  });
+        [BEGIN CONVERSATION]
+   
+        Hello esteemed advisors. I seek your council.
+        
+        ${message}
+      `,
+      schema: responseSchema,
+    });
 
-  return result.toTextStreamResponse();
+    return result.toTextStreamResponse();
+
+  } catch (error) {
+    console.error('Error in chat route:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
