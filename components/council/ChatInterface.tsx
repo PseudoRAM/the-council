@@ -94,7 +94,7 @@ export default function ChatInterface({ councilMember }: Props) {
         responseLength: data.response?.length,
       });
 
-      let audioUrl = null;
+      let audioUrl = undefined;
       if (data.audio) {
         // Convert Base64 to Blob
         const audioBlob = new Blob(
