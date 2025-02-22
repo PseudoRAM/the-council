@@ -8,6 +8,7 @@ import { PlaceholderInput } from "@/components/ui/placeholder-input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateVoiceWithId } from "@/utils/voice/elevenlabs";
+import { useRouter } from "next/navigation";
 
 const PLACEHOLDER_MESSAGES = [
   "Ask the council about your challenges...",
@@ -41,6 +42,8 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
       setInputMessage(text);
     }
   }, [text]);
+
+  const navigate = useRouter();
 
   const [speakingMemberId, setSpeakingMemberId] = useState<string | null>(null);
   const [audioBuffers, setAudioBuffers] = useState<{
@@ -312,17 +315,23 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                     handleSendMessage(inputMessage);
                   }}
                 />
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-sm text-gray-500">Voice Response</span>
-                  <button
-                    onClick={() => setVoiceEnabled(!voiceEnabled)}
-                    className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    style={{ backgroundColor: voiceEnabled ? '#3b82f6' : '#6b7280' }}
-                  >
-                    <span
-                      className={`${voiceEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                    />
-                  </button>
+                <div className="flex flex-row gap-5 justify-center w-full">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-sm text-gray-500">
+                      Voice Response
+                    </span>
+                    <button
+                      onClick={() => setVoiceEnabled(!voiceEnabled)}
+                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      style={{
+                        backgroundColor: voiceEnabled ? "#3b82f6" : "#6b7280",
+                      }}
+                    >
+                      <span
+                        className={`${voiceEnabled ? "translate-x-6" : "translate-x-1"} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -346,6 +355,14 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                 </div>
               ))}
             </div>
+            <button
+              onClick={() => {
+                navigate.push("/update-council");
+              }}
+              className="mx-auto w-fit flex items-center justify-center gap-2 bg-[#e6a5ee] text-black rounded-lg px-4 py-2 text-sm font-semibold"
+            >
+              Update council
+            </button>
           </div>
         )}
         {messages.length > 0 && (
@@ -362,11 +379,11 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
             <button
               onClick={() => setVoiceEnabled(!voiceEnabled)}
               className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              style={{ backgroundColor: voiceEnabled ? '#3b82f6' : '#6b7280' }}
+              style={{ backgroundColor: voiceEnabled ? "#3b82f6" : "#6b7280" }}
               title={voiceEnabled ? "Voice enabled" : "Voice disabled"}
             >
               <span
-                className={`${voiceEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                className={`${voiceEnabled ? "translate-x-6" : "translate-x-1"} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
               />
             </button>
             <button
