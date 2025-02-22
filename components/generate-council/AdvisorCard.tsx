@@ -31,8 +31,8 @@ export const AdvisorCard = ({
     <Card
       className={cn(
         "h-full relative py-6",
-        onSelect && "hover:shadow-lg transition-shadow cursor-pointer",
-        isSelected && "ring-2 ring-primary"
+        onSelect ? "hover:shadow-lg transition-shadow cursor-pointer" : "",
+        isSelected ? "ring-2 ring-primary" : ""
       )}
       onClick={onSelect}
       onMouseEnter={() => setIsHovered(true)}
