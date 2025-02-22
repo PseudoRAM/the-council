@@ -233,7 +233,7 @@ const QuestionnaireForm = () => {
     }
   };
 
-  const addAdvisorsToSupabase = async () => {};
+  const addAdvisorsToSupabase = async () => { };
 
   const handleShortcut = async () => {
     try {
@@ -327,7 +327,7 @@ const QuestionnaireForm = () => {
       <div className="space-y-8  pb-10">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Your Advisors</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Your Advisors</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -387,7 +387,7 @@ const QuestionnaireForm = () => {
                       `flex items-center transition-all bg-black text-white gap-2`,
                       selectedAdvisors.length < 3
                         ? "opacity-50 cursor-not-allowed"
-                        : "bg-[#e6a5ee] text-black"
+                        : "bg-[#e6a5ee] text-black hover:bg-[#e6a5ee]/80"
                     )}
                     disabled={isLoading || selectedAdvisors.length < 3}
                   >

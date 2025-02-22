@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     // Construct the prompt
     const prompt = `You are an intelligence gifted in reading a person's patterns and values and identifying what will benefit their growth and understanding.
 
-Attached is a worksheet I've filled out with information about myself. Read the worksheet, think carefully about what it reveals, and assemble a list of 10 potential advisors you think I would benefit from having an extended conversation with.
+Attached is a series of responses I've filled out with information about myself. Read the questions and answers, think carefully about what it reveals, and assemble a list of 10 potential advisors you think I would benefit from having an extended conversation with.
 
 There are no formal limits on advisor suggestions:
 - They can be real people or inspired by real people
@@ -55,7 +55,7 @@ Ideally the set should be well-balanced and afford multiple ways of knowing and 
 
 For each advisor you suggest, give a brief explanation of why you think they might be a good match.
 
-Before naming the advisors, you may write out any patterns you observe in the worksheet that might be helpful for us in this process.
+Before naming the advisors, you may write out any patterns you observe in the responses that might be helpful for us in this process.
 
 When that is done I will ask for a final listing of the advisors. This will include:
 - Name
@@ -64,13 +64,13 @@ When that is done I will ask for a final listing of the advisors. This will incl
 - Their unique voice and speaking style
 - The exact types of problems they are most suited to solving
 
-Here is the worksheet:
+Here is the responses:
 
 ${formattedQuestionnaire}
 
 Your response MUST be formatted as a valid JSON object with the following structure:
 {
-  "initialJustification": "A paragraph identifying key patterns from the worksheet",
+  "initialJustification": "A paragraph identifying key patterns from the responses",
   "advisors": [
     {
       "name": "Advisor Name",
