@@ -17,9 +17,9 @@ export function InputBento() {
     console.log("submitted");
   };
   return (
-    <div className="h-[40rem] flex flex-col justify-center  items-center px-4">
-      <h2 className="mb-10 sm:mb-20 text-xl text-center sm:text-5xl dark:text-white text-black">
-        Ask Aceternity UI Anything
+    <div className="flex flex-col justify-center  items-center px-4">
+      <h2 className="mb-5 sm:mb-10 text-xl text-center sm:text-5xl dark:text-white text-black">
+        Ask your council anything.
       </h2>
       <PlaceholderInput
         placeholders={placeholders}
