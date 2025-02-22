@@ -9,11 +9,11 @@ import { useRecordVoice } from "@/hooks/use-record-voice";
 export function PlaceholderInput({
   placeholders,
   onChange,
-  onSubmit,
+  onSend,
 }: {
   placeholders: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onSend?: (message?: string) => void;
 }) {
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [isListening, setIsListening] = useState(false);
@@ -157,6 +157,7 @@ export function PlaceholderInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !animating) {
       vanishAndSubmit();
+      onSend?.();
     }
   };
 
@@ -177,7 +178,7 @@ export function PlaceholderInput({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     vanishAndSubmit();
-    onSubmit && onSubmit(e);
+    onSend?.();
   };
 
   useEffect(() => {
@@ -194,7 +195,7 @@ export function PlaceholderInput({
   }, [text, onChange]);
 
   return (
-    <div>
+    <div className="w-full">
       <form
         className={cn(
           "w-full relative max-w-xl mx-auto bg-white dark:bg-zinc-800 min-h-[3rem] rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
@@ -222,6 +223,7 @@ export function PlaceholderInput({
           onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
             if (e.key === "Enter" && !animating) {
               vanishAndSubmit();
+              onSend?.();
             }
           }}
           ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}

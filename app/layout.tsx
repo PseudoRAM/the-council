@@ -43,7 +43,9 @@ export default function RootLayout({
                   <HeaderAuth />
                 </div>
               </nav>
-              <div className="flex flex-col gap-5 max-w-5xl">{children}</div>
+              <div className="flex flex-col gap-5 max-w-5xl w-full">
+                {children}
+              </div>
             </div>
           </main>
         </ThemeProvider>
