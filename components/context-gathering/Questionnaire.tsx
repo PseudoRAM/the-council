@@ -169,7 +169,23 @@ const QuestionnaireForm = () => {
         throw new Error('Failed to create council');
       }
 
-      // Navigate to chat page after successful council creation
+      // Call populate-extra-data to generate voices and images
+      const populateResponse = await fetch('/api/populate-extra-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!populateResponse.ok) {
+        throw new Error('Failed to generate voices and images');
+      }
+
+      // Wait for the population to complete
+      const populateData = await populateResponse.json();
+      console.log('Population complete:', populateData);
+
+      // Navigate to chat page after successful council creation and population
       router.push('/chat');
 
     } catch (err) {

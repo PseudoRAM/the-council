@@ -37,7 +37,7 @@ export async function generateAndSaveVoiceForMember(member: DatabaseCouncilMembe
     console.log('Creating voice for member:', {
       memberId: member.id,
       name: member.name,
-      description: member.voice_description.substring(0, 50) + '...',
+      description: member.voice_description
     });
 
     // First generate a preview
