@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { AdvisorType, Advisor, AdvisorResponse, CouncilMember } from '@/app/types/advisor';
 import { shortcutData } from './shortcut';
 import { AdvisorCard } from '@/components/generate-council/AdvisorCard';
+import { useRouter } from 'next/navigation';
 
 type Answers = {
   [key: number]: {
@@ -45,6 +46,7 @@ const QuestionnaireForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [advisors, setAdvisors] = useState<AdvisorResponse | null>(null);
   const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
+  const router = useRouter();
 
   const sections = [
     {
@@ -133,7 +135,7 @@ const QuestionnaireForm = () => {
       const data = await response.json();
       console.log('Generated Advisors Response:', data);
       setAdvisors(data);
-      setCurrentSection(-2);
+      setCurrentSection(-3);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -167,8 +169,8 @@ const QuestionnaireForm = () => {
         throw new Error('Failed to create council');
       }
 
-      // Navigate to the next page or update UI state
-      setShowResults(true);
+      // Navigate to chat page after successful council creation
+      router.push('/chat');
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
