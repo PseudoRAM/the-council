@@ -1,12 +1,17 @@
 // app/api/generate-advisors/route.ts
 import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { AdvisorResponse } from '@/app/types/advisor';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 if (!ANTHROPIC_API_KEY) {
   throw new Error('ANTHROPIC_API_KEY is not set in environment variables');
 }
+
+const anthropic = new Anthropic({
+  apiKey: ANTHROPIC_API_KEY,
+});
 
 export async function POST(request: Request) {
   try {
@@ -52,36 +57,35 @@ When that is done I will ask for a final listing of the advisors. This will incl
 
 Here is the worksheet:
 
-${formattedQuestionnaire}`;
+${formattedQuestionnaire}
 
-    // Call Anthropic API
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-api-key': ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 4000,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
-      })
+Your response MUST be formatted as a valid JSON object with the following structure:
+{
+  "initialJustification": "A paragraph identifying key patterns from the worksheet",
+  "advisors": [
+    {
+      "name": "Advisor Name",
+      "type": "historical|archetypal|fictional|personal",
+      "why": "Explanation of why this advisor would be beneficial"
+    }
+  ],
+  "followUp": "A question about exploring or narrowing down the advisors"
+}
+  `;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { error: 'Failed to generate advisors' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Parse the text content from the response
+    const advisorsData = JSON.parse(response.content[0].type === "text" ? response.content[0].text : "");
+    console.log('Generated Advisors Response:', advisorsData);
+    return NextResponse.json(advisorsData);
 
   } catch (error) {
     console.error('Error in generate-advisors route:', error);
