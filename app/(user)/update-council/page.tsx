@@ -2,7 +2,6 @@ import React from "react";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import QuestionnaireForm from "@/components/context-gathering/Questionnaire";
-import { getUserCouncilMembers } from "@/utils/council/council-service";
 
 export default async function CouncilPage() {
   const supabase = await createClient();
@@ -13,12 +12,6 @@ export default async function CouncilPage() {
 
   if (!user) {
     return redirect("/sign-in");
-  }
-
-  const councilMembers = await getUserCouncilMembers(user.id);
-
-  if (!!councilMembers && councilMembers.length > 0) {
-    return redirect("/chat");
   }
 
   return (
