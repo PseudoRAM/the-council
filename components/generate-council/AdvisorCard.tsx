@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { useState } from "react";
 
 interface AdvisorCardProps {
   advisor: {
@@ -24,14 +25,18 @@ export const AdvisorCard = ({
   isSelected,
   onSelect,
 }: AdvisorCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <Card
       className={cn(
         "h-full relative py-6",
-        onSelect && "hover:shadow-lg transition-shadow cursor-pointer",
-        isSelected && "ring-2 ring-primary"
+        onSelect ? "hover:shadow-lg transition-shadow cursor-pointer" : "",
+        isSelected ? "ring-2 ring-primary" : ""
       )}
       onClick={onSelect}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {isSelected && (
         <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 transform transition-transform duration-200 ease-in-out">
@@ -70,16 +75,12 @@ export const AdvisorCard = ({
           </div>
         </div>
       </CardHeader>
-      {advisor.why ? (
+      {(advisor.description || advisor.why) && (
         <CardContent className="pb-0 pt-4">
-          <p className="text-sm text-gray-600">{advisor.why}</p>
+          <p className="text-sm text-gray-600 transition-opacity duration-1000">
+            {isHovered && advisor.why ? advisor.why : advisor.description}
+          </p>
         </CardContent>
-      ) : (
-        advisor.description && (
-          <CardContent className="pb-0 pt-4">
-            <p className="text-sm text-gray-600">{advisor.description}</p>
-          </CardContent>
-        )
       )}
     </Card>
   );
