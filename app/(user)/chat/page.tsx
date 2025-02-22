@@ -16,12 +16,15 @@ interface CouncilMemberForChat {
   id: string;
   name: string;
   image: string;
-  voidId: string;  // Note: this matches what CouncilChatLayout expects
+  voidId: string; // Note: this matches what CouncilChatLayout expects
+  type?: string;
+  why?: string;
+  description?: string;
 }
 
 export default async function CouncilPage() {
   const supabase = await createClient();
-  
+
   // Check authentication
   const {
     data: { session },
@@ -39,10 +42,12 @@ export default async function CouncilPage() {
 
   // Fetch active council members for the current user
   const { data: councilMembers, error } = await supabase
-    .from('council_members')
-    .select('id, name, image_url, voice_id')
-    .eq('user_id', session.user.id)
-    .eq('is_active', true);
+    .from("council_members")
+    .select(
+      "id, name, image_url, voice_id, character_type, reason, description"
+    )
+    .eq("user_id", session.user.id)
+    .eq("is_active", true);
 
   if (error) {
     console.error("Error fetching council members:", error);
@@ -51,7 +56,9 @@ export default async function CouncilPage() {
   }
 
   if (!councilMembers || councilMembers.length === 0) {
-    console.log("No active council members found, redirecting to questionnaire");
+    console.log(
+      "No active council members found, redirecting to questionnaire"
+    );
     redirect("/questionnaire");
   }
 
@@ -59,8 +66,11 @@ export default async function CouncilPage() {
   const council: CouncilMemberForChat[] = councilMembers.map((member) => ({
     id: member.id,
     name: member.name,
-    image: member.image_url || '/default-avatar.jpg',
-    voidId: member.voice_id || '',  // Changed from voiceId to voidId to match expected type
+    image: member.image_url || "/samples/head1.jpg",
+    voidId: member.voice_id || "",
+    type: member.character_type,
+    why: member.reason,
+    description: member.description,
   }));
 
   return <CouncilChatLayout council={council} />;
