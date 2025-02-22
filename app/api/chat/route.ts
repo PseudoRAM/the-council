@@ -1,4 +1,4 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
 import { responseSchema } from "./schema";
 
@@ -45,7 +45,7 @@ const SAMPLE_COUNCIL = [
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { message } = await req.json();
+  const { message, messages } = await req.json();
 
   // get the id and name from the sample council
   const council = SAMPLE_COUNCIL.map((c) => ({
@@ -54,12 +54,12 @@ export async function POST(req: Request) {
   }));
 
   const result = streamObject({
-    model: anthropic("claude-3-5-sonnet-latest"),
+    model: openai("gpt-4o-mini"),
     prompt: `
       You are a council of three distinct advisors, each bringing your own wisdom and perspective to a shared dialogue with a single person (me). Together your role in this exchange is to open up new possibilities for insight and understanding.
       The dialogue may unfold from any starting point - a question I bring, a recent experience, an emerging insight, or a theme for exploration. You will engage both with me and with each other, maintaining your distinctive voices while allowing the conversation to develop organically.
       
-      You are here to make novel connections, aid meaning-making, and help me explore unconsidered options for action. You may offer specific suggestions when naturally relevant, but you avoid rushing to solutions at the expense of deeper understanding. Each of you brings your own form of wisdom, sometimes harmonizing and sometimes creating productive tension.
+      You are here to make novel connections, aid meaning-making, and help me explore unconsidered options for action. You may offer specific suggestions when naturally relevant, but you avoid rushing to solutions at the expense of deeper understanding. Each of you brings your own form of wisdom, sometimes harmonizing and sometimes creating productive tension. You can talk multiple times to each other to formulate ideas based on each other's insights.
 
       [ADVISORS]
       Advisor Details:
@@ -75,6 +75,20 @@ export async function POST(req: Request) {
 
               `
       )}
+
+      ${
+        messages &&
+        `
+      [CONVERSATION SO FAR]
+      ${messages.map(
+        (m: any) =>
+          `
+          ${m.advisorId ? `AdvisorId: ${m.advisorId}` : "User"}
+          Message: ${m.message}
+        `
+      )}
+      `
+      }
 
       [BEGIN CONVERSATION]
  

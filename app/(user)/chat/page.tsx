@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { experimental_useObject } from "@ai-sdk/react";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { responseSchema } from "@/app/api/chat/schema";
+import { useRecordVoice } from "@/hooks/use-record-voice";
 
 const SAMPLE_COUNCIL = [
   {
@@ -32,20 +33,49 @@ type Message = {
 export default function CouncilPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [messageQueue, setMessageQueue] = useState<Message[]>([]);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const { recording, startRecording, stopRecording, text } = useRecordVoice();
 
+  useEffect(() => {
+    if (text) {
+      setInputMessage(text);
+    }
+  }, [text]);
+
+  const processMessageQueue = useCallback(() => {
+    if (messageQueue.length === 0) {
+      setIsProcessingQueue(false);
+      return;
+    }
+
+    setIsProcessingQueue(true);
+    const nextMessage = messageQueue[0];
+
+    setTimeout(() => {
+      setMessageQueue((prev) => prev.slice(1));
+      setIsProcessingQueue(false); // Reset processing flag after handling message
+    }, 2000);
+  }, [messageQueue]);
+
+  useEffect(() => {
+    if (messageQueue.length > 0 && !isProcessingQueue) {
+      processMessageQueue();
+    }
+  }, [messageQueue, isProcessingQueue, processMessageQueue]);
+
+  // Remove duplicate experimental_useObject declaration
   const { submit, isLoading, object } = experimental_useObject({
     api: "/api/chat",
     schema: responseSchema,
     onFinish({ object }) {
       if (object != null) {
-        setMessages((prev) => [
-          ...prev,
-          ...object.messages.map((m) => ({
-            content: m.message,
-            senderId: m.adviserId,
-          })),
-        ]);
-        setInputMessage("");
+        const newMessages = object.messages.map((m) => ({
+          content: m.message,
+          senderId: m.adviserId,
+        }));
+        setMessages((prev) => [...prev, ...newMessages]);
+        setMessageQueue((prev) => [...prev, ...newMessages]);
       }
     },
   });
@@ -64,15 +94,19 @@ export default function CouncilPage() {
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
 
-    // Add user message
+    // Add user message instantly
     const userMessage: Message = {
       senderId: "user",
       content: inputMessage,
     };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages([...messages, userMessage]);
 
     submit({
       message: inputMessage,
+      messages: messages.map((m) => ({
+        message: m.content,
+        advisorId: m.senderId,
+      })),
     });
 
     setInputMessage("");
@@ -110,12 +144,12 @@ export default function CouncilPage() {
         )}
         {[
           ...messages,
-          ...(object?.messages
-            ? object.messages.map((m) => ({
-                content: m?.message ?? "",
-                senderId: m?.adviserId,
-              }))
-            : []),
+          ...((isLoading &&
+            object?.messages?.map((m) => ({
+              content: m?.message,
+              senderId: m?.adviserId,
+            }))) ||
+            []),
         ].map(
           (message, index) =>
             message?.senderId && (
@@ -169,6 +203,25 @@ export default function CouncilPage() {
             placeholder="Type your message..."
             className="flex-1 rounded-lg object-top border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
           />
+          <button
+            onClick={recording ? stopRecording : startRecording}
+            className={`${recording ? 'bg-red-500' : 'bg-gray-500'} text-white rounded-lg object-top p-1.5 hover:opacity-80 transition-colors`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"
+              />
+            </svg>
+          </button>
           <button
             onClick={handleSendMessage}
             disabled={isLoading}
