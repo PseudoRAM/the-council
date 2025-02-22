@@ -70,10 +70,16 @@ export const AdvisorCard = ({
           </div>
         </div>
       </CardHeader>
-      {advisor.why && (
+      {advisor.why ? (
         <CardContent className="pb-0 pt-4">
           <p className="text-sm text-gray-600">{advisor.why}</p>
         </CardContent>
+      ) : (
+        advisor.description && (
+          <CardContent className="pb-0 pt-4">
+            <p className="text-sm text-gray-600">{advisor.description}</p>
+          </CardContent>
+        )
       )}
     </Card>
   );

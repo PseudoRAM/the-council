@@ -5,11 +5,12 @@ import { experimental_useObject } from "@ai-sdk/react";
 import { responseSchema } from "@/app/api/chat/schema";
 import { useRecordVoice } from "@/hooks/use-record-voice";
 import { PlaceholderInput } from "@/components/ui/placeholder-input";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateVoiceWithId } from "@/utils/voice/elevenlabs";
 import { useRouter } from "next/navigation";
 import { AdvisorCard } from "../generate-council/AdvisorCard";
+import { AnimatedAdvisors } from "../ui/animated-advisors";
+import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 
 const PLACEHOLDER_MESSAGES = [
   "Ask the council about your challenges...",
@@ -28,6 +29,9 @@ type COUNCIL = {
   name: string;
   image: string;
   voidId: string;
+  type?: string;
+  description?: string;
+  why?: string;
 }[];
 
 export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
@@ -336,27 +340,32 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-row gap-5 flex-wrap justify-center">
-              {council.map((council, index) => (
-                <div key={index} className="w-[250px]">
-                  <AdvisorCard
-                    advisor={{
-                      id: council.id,
-                      name: council.name,
-                      imageUrl: council.image,
+            <div className="pt-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Your Council</CardTitle>
+                  <button
+                    onClick={() => {
+                      navigate.push("/update-council");
                     }}
+                    className="flex items-center justify-center gap-2 bg-[#e6a5ee] text-black rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#e883f5] transition-colors"
+                  >
+                    Update council
+                  </button>
+                </CardHeader>
+                <CardContent>
+                  <AnimatedAdvisors
+                    advisors={council.map((member) => {
+                      return {
+                        name: member.name,
+                        src: member.image,
+                        description: `${member.description}`,
+                      };
+                    })}
                   />
-                </div>
-              ))}
+                </CardContent>
+              </Card>
             </div>
-            <button
-              onClick={() => {
-                navigate.push("/update-council");
-              }}
-              className="mx-auto w-fit flex items-center justify-center gap-2 bg-[#e6a5ee] text-black rounded-lg px-4 py-2 text-sm font-semibold"
-            >
-              Update council
-            </button>
           </div>
         )}
         {messages.length > 0 && (
