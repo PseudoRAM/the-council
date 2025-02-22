@@ -1,44 +1,54 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { experimental_useObject } from "@ai-sdk/react";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { responseSchema } from "@/app/api/chat/schema";
 
 const SAMPLE_COUNCIL = [
   {
+    id: "1",
     name: "Aristotle",
     image: "/samples/head1.jpg",
   },
   {
+    id: "2",
     name: "Albert Einstein",
     image: "/samples/head2.jpg",
   },
   {
+    id: "3",
     name: "Nikola Tesla",
     image: "/samples/head3.jpg",
   },
 ];
 
 type Message = {
-  id: number;
   content: string;
-  sender: string;
-  senderImage?: string;
-  timestamp: Date;
+  senderId?: string;
 };
 
 export default function CouncilPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      content:
-        "In matters of decision, one must first examine the facts and principles at hand. What specific challenge troubles your mind?",
-      sender: SAMPLE_COUNCIL[0].name,
-      senderImage: SAMPLE_COUNCIL[0].image,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+
+  const { submit, isLoading, object } = experimental_useObject({
+    api: "/api/chat",
+    schema: responseSchema,
+    onFinish({ object }) {
+      if (object != null) {
+        setMessages((prev) => [
+          ...prev,
+          ...object.messages.map((m) => ({
+            content: m.message,
+            senderId: m.adviserId,
+          })),
+        ]);
+        setInputMessage("");
+      }
+    },
+  });
 
   // Add ref for message container
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -56,46 +66,21 @@ export default function CouncilPage() {
 
     // Add user message
     const userMessage: Message = {
-      id: messages.length + 1,
+      senderId: "user",
       content: inputMessage,
-      sender: "User",
-      timestamp: new Date(),
     };
+    setMessages((prev) => [...prev, userMessage]);
 
-    // Generate 1-3 advisor responses
-    const numResponses = Math.floor(Math.random() * 3) + 1;
-    const advisorResponses: Message[] = [];
+    submit({
+      message: inputMessage,
+    });
 
-    const advisorReplies = [
-      "Let me share my perspective on this matter...",
-      "An interesting point you raise. Here's my thought...",
-      "From my experience, I would suggest...",
-      "This reminds me of a similar situation...",
-      "Consider looking at it from this angle...",
-    ];
-
-    for (let i = 0; i < numResponses; i++) {
-      const advisorIndex = (messages.length + i) % SAMPLE_COUNCIL.length;
-      const randomReply =
-        advisorReplies[Math.floor(Math.random() * advisorReplies.length)];
-
-      advisorResponses.push({
-        id: messages.length + 2 + i,
-        content: randomReply,
-        sender: SAMPLE_COUNCIL[advisorIndex].name,
-        senderImage: SAMPLE_COUNCIL[advisorIndex].image,
-        timestamp: new Date(),
-      });
-    }
-
-    const newMessages = [...messages, userMessage, ...advisorResponses];
-    setMessages(newMessages);
     setInputMessage("");
   };
 
   return (
     <div className="flex flex-col w-full max-w-3xl mx-auto p-3 gap-4 h-[calc(100vh-100px)]">
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-wrap gap-2 mb-2  w-full">
         {SAMPLE_COUNCIL.map((advisor, index) => (
           <div key={index} className="relative group">
             <img
@@ -112,37 +97,66 @@ export default function CouncilPage() {
 
       <div
         ref={messageContainerRef}
-        className="flex-1 overflow-y-auto space-y-4 scroll-smooth"
+        className="flex-1 overflow-y-auto space-y-4 scroll-smooth w-full relative"
       >
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex items-end gap-3 ${message.sender === "User" ? "justify-end" : ""}`}
-          >
-            {message.sender !== "User" && (
-              <img
-                className="w-8 h-8 rounded-lg object-top object-cover"
-                src={message.senderImage}
-                alt={message.sender}
-              />
-            )}
-            <div
-              className={`flex flex-col max-w-[70%] ${message.sender === "User" ? "bg-[#e6a5ee] text-black" : "bg-gray-100"} rounded-xl ${message.sender === "User" ? "rounded-br-none" : "rounded-bl-none"} p-3 space-y-1.5`}
-            >
-              {message.sender !== "User" && (
-                <span className="font-semibold text-gray-900 text-sm">
-                  {message.sender}
-                </span>
-              )}
-              <p className="text-gray-700 text-sm">{message.content}</p>
+        {isLoading && (
+          <div className="absolute bottom-0 left-0 right-0 p-3 flex justify-center">
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#e6a5ee] animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#e6a5ee] animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-2 h-2 rounded-full bg-[#e6a5ee] animate-bounce"></div>
             </div>
-            {message.sender === "User" && (
-              <div className="w-8 h-8 rounded-lg object-top bg-gray-200 flex items-center justify-center text-gray-700 text-sm font-semibold">
-                JS
-              </div>
-            )}
           </div>
-        ))}
+        )}
+        {[
+          ...messages,
+          ...(object?.messages
+            ? object.messages.map((m) => ({
+                content: m?.message ?? "",
+                senderId: m?.adviserId,
+              }))
+            : []),
+        ].map(
+          (message, index) =>
+            message?.senderId && (
+              <div
+                key={`message-${index}`}
+                className={`flex items-end gap-3 ${message.senderId === "user" ? "justify-end" : ""}`}
+              >
+                {message.senderId !== "user" && (
+                  <img
+                    className="w-8 h-8 rounded-lg object-top object-cover"
+                    src={
+                      SAMPLE_COUNCIL.find((c) => c.id === message.senderId)
+                        ?.image
+                    }
+                    alt={
+                      SAMPLE_COUNCIL.find((c) => c.id === message.senderId)
+                        ?.name
+                    }
+                  />
+                )}
+                <div
+                  className={`flex flex-col max-w-[70%] ${message.senderId === "user" ? "bg-[#e6a5ee] text-black" : "bg-gray-100"} rounded-xl ${!!message.senderId ? "rounded-br-none" : "rounded-bl-none"} p-3 space-y-1.5`}
+                >
+                  {message.senderId !== "user" && (
+                    <span className="font-semibold text-gray-900 text-sm">
+                      {
+                        SAMPLE_COUNCIL.find((c) => c.id === message.senderId)
+                          ?.name
+                      }
+                    </span>
+                  )}
+                  <p className="text-gray-700 text-sm">{message.content}</p>
+                </div>
+                {message.senderId === "user" && (
+                  <div className="w-8 h-8 rounded-lg object-top bg-gray-200 flex items-center justify-center text-gray-700 text-sm font-semibold">
+                    You
+                  </div>
+                )}
+              </div>
+            )
+        )}
       </div>
 
       <div className="sticky bottom-0 bg-white p-3 border-t">
@@ -157,7 +171,8 @@ export default function CouncilPage() {
           />
           <button
             onClick={handleSendMessage}
-            className="bg-[#e6a5ee] text-white rounded-lg object-top p-1.5 hover:bg-[#e883f5] transition-colors"
+            disabled={isLoading}
+            className="bg-[#e6a5ee] text-white rounded-lg object-top p-1.5 hover:bg-[#e883f5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
