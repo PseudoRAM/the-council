@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { AdvisorType, Advisor, AdvisorResponse } from '@/app/types/advisor';
+import { AdvisorType, Advisor, AdvisorResponse, CouncilMember } from '@/app/types/advisor';
 import { shortcutData } from './shortcut';
+import { AdvisorCard } from '@/components/generate-council/AdvisorCard';
 
 type Answers = {
   [key: number]: {
@@ -43,6 +44,7 @@ const QuestionnaireForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [advisors, setAdvisors] = useState<AdvisorResponse | null>(null);
+  const [selectedAdvisors, setSelectedAdvisors] = useState<string[]>([]);
 
   const sections = [
     {
@@ -138,6 +140,41 @@ const QuestionnaireForm = () => {
     }
   };
 
+  const handleCreateCouncil = async () => {
+    console.log('Creating council...', selectedAdvisors);
+
+    try {
+      if (!advisors || selectedAdvisors.length === 0) {
+        setError('Please select at least one advisor');
+        return;
+      }
+
+      const response = await fetch('/api/council/select', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedAdvisors,
+          allAdvisors: advisors.councilMembers
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create council');
+      }
+
+      // Navigate to the next page or update UI state
+      setShowResults(true);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const addResponsesToSupabase = async (formattedAnswers: FormattedAnswer[]) => {
     try {
       const response = await fetch('/api/store-user-responses', {
@@ -199,6 +236,17 @@ const QuestionnaireForm = () => {
     }
   };
 
+  const handleAdvisorSelection = (advisorId: string) => {
+    setSelectedAdvisors(prev => {
+      if (prev.includes(advisorId)) {
+        return prev.filter(id => id !== advisorId);
+      } else if (prev.length < 3) {
+        return [...prev, advisorId];
+      }
+      return prev;
+    });
+  };
+
   if (currentSection === -1) {
     return (
       <div className="space-y-8">
@@ -254,28 +302,22 @@ const QuestionnaireForm = () => {
 
                 {/* Advisors Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {advisors.advisors.map((advisor: Advisor, index: number) => (
-                    <Card key={index} className="h-full hover:shadow-lg transition-shadow">
-                      <CardHeader className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{advisor.name}</CardTitle>
-                          <Badge
-                            className={`
-                              ${advisor.type === 'historical' && 'bg-blue-100 text-blue-800'}
-                              ${advisor.type === 'fictional' && 'bg-purple-100 text-purple-800'}
-                              ${advisor.type === 'archetypal' && 'bg-green-100 text-green-800'}
-                              ${advisor.type === 'other' && 'bg-gray-100 text-gray-800'}
-                              capitalize
-                            `}
-                          >
-                            {advisor.type}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-gray-600">{advisor.why}</p>
-                      </CardContent>
-                    </Card>
+                  {advisors.councilMembers.map((member: CouncilMember, index: number) => (
+                    <AdvisorCard
+                      key={index}
+                      advisor={{
+                        id: member.id,
+                        type: member.character_type,
+                        name: member.name,
+                        description: member.description,
+                        why: member.reason,
+                        traditions: member.properties.traditions,
+                        speakingStyle: member.properties.speakingStyle,
+                        bestSuitedFor: member.properties.bestSuitedFor
+                      }}
+                      isSelected={selectedAdvisors.includes(member.id)}
+                      onSelect={() => handleAdvisorSelection(member.id)}
+                    />
                   ))}
                 </div>
 
@@ -293,6 +335,16 @@ const QuestionnaireForm = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={handleCreateCouncil}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            {isLoading ? "Creating..." : "Create The Council"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -314,27 +366,12 @@ const QuestionnaireForm = () => {
               {/* Advisors Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {advisors.advisors.map((advisor: Advisor, index: number) => (
-                  <Card key={index} className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{advisor.name}</CardTitle>
-                        <Badge
-                          className={`
-                            ${advisor.type === 'historical' && 'bg-blue-100 text-blue-800'}
-                            ${advisor.type === 'fictional' && 'bg-purple-100 text-purple-800'}
-                            ${advisor.type === 'archetypal' && 'bg-green-100 text-green-800'}
-                            ${advisor.type === 'other' && 'bg-gray-100 text-gray-800'}
-                            capitalize
-                          `}
-                        >
-                          {advisor.type}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600">{advisor.why}</p>
-                    </CardContent>
-                  </Card>
+                  <AdvisorCard
+                    key={index}
+                    advisor={advisor}
+                    isSelected={selectedAdvisors.includes(advisor.id)}
+                    onSelect={() => handleAdvisorSelection(advisor.id)}
+                  />
                 ))}
               </div>
 
