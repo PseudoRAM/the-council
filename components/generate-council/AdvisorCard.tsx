@@ -77,16 +77,10 @@ export const AdvisorCard = ({
       </CardHeader>
       {(advisor.description || advisor.why) && (
         <CardContent className="pb-0 pt-4">
-          <p className="text-sm text-gray-600 transition-opacity duration-200">
+          <p className="text-sm text-gray-600 transition-opacity duration-1000">
             {isHovered && advisor.why ? advisor.why : advisor.description}
           </p>
         </CardContent>
-      ) : (
-        advisor.description && (
-          <CardContent className="pb-0 pt-4">
-            <p className="text-sm text-gray-600">{advisor.description}</p>
-          </CardContent>
-        )
       )}
     </Card>
   );
