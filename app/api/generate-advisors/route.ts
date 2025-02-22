@@ -87,7 +87,8 @@ Your response MUST be formatted as a valid JSON object with the following struct
   `;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: "claude-3-5-sonnet-20241022",
+      // model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [{
         role: 'user',
@@ -95,18 +96,27 @@ Your response MUST be formatted as a valid JSON object with the following struct
       }]
     });
 
-    if (!response.content[0] || response.content[0].type !== 'text') {
-      return NextResponse.json(
-        { error: 'No response content from AI' },
-        { status: 500 }
-      );
-    }
-
-    // Parse the text content from the response
+    // Add detailed response logging
+    console.log('=== Response Debug ===');
+    console.log('Response type:', typeof response);
+    console.log('Content array length:', response.content?.length);
+    console.log('First content item type:', response.content[0]?.type);
+    
+    const rawText = response.content[0]?.type === 'text' ? response.content[0].text : '{}';
+    
+    // Check for hidden characters
+    console.log('=== Character Analysis ===');
+    console.log('Raw text length:', rawText.length);
+    console.log('First char code:', rawText.charCodeAt(0));
+    console.log('First few chars:', Array.from(rawText.slice(0, 10)).map(c => c.charCodeAt(0)));
+    
+    // Try cleaning the text
+    const cleanText = rawText
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width spaces
+    
     try {
-      const advisorsData: AdvisorResponse = JSON.parse(
-        response.content[0]?.type === 'text' ? response.content[0].text : '{}'
-      );
+      const advisorsData: AdvisorResponse = JSON.parse(cleanText);
       
       if (!advisorsData.advisors || !Array.isArray(advisorsData.advisors)) {
         return NextResponse.json(
