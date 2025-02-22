@@ -59,7 +59,7 @@ export default async function CouncilPage() {
     console.log(
       "No active council members found, redirecting to questionnaire"
     );
-    redirect("/questionnaire");
+    redirect("/home");
   }
 
   // Map the council members to the format expected by CouncilChatLayout

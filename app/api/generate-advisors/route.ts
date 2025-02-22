@@ -17,17 +17,26 @@ const anthropic = new Anthropic({
 
 export async function POST(request: Request) {
   try {
+    console.log('=== Starting POST request ===');
+    
+    // Log request body
     const body = await request.json();
+    console.log('Request body:', {
+      hasQuestionnaireData: !!body.questionnaireData,
+      dataLength: body.questionnaireData?.length
+    });
+
     const { questionnaireData } = body;
 
     if (!questionnaireData || !Array.isArray(questionnaireData)) {
+      console.error('Invalid questionnaire data:', questionnaireData);
       return NextResponse.json(
         { error: 'Invalid questionnaire data format' },
         { status: 400 }
       );
     }
 
-    // Format questionnaire data into a readable string
+    // Log formatted questionnaire
     const formattedQuestionnaire = questionnaireData.map((section: any) => {
       const responses = section.responses
         .map((r: any) => `Q: ${r.question}\nA: ${r.answer}`)
@@ -35,6 +44,9 @@ export async function POST(request: Request) {
       
       return `### ${section.section}\n\n${responses}`;
     }).join('\n\n');
+
+    console.log('=== Formatted Questionnaire ===');
+    console.log(formattedQuestionnaire.slice(0, 200) + '...');
 
     // Construct the prompt
     const prompt = `You are an intelligence gifted in reading a person's patterns and values and identifying what will benefit their growth and understanding.
@@ -86,8 +98,11 @@ Your response MUST be formatted as a valid JSON object with the following struct
 }
   `;
 
+    // Log Claude request
+    console.log('=== Making Claude Request ===');
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-3-5-sonnet-20241022',
+      // model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [{
         role: 'user',
@@ -95,20 +110,38 @@ Your response MUST be formatted as a valid JSON object with the following struct
       }]
     });
 
+    console.log('=== Claude Response ===');
+    console.log('Response structure:', {
+      hasContent: !!response.content,
+      contentLength: response.content?.length,
+      firstContentType: response.content?.[0]?.type
+    });
+
     if (!response.content[0] || response.content[0].type !== 'text') {
+      console.error('Invalid response format:', response);
       return NextResponse.json(
         { error: 'No response content from AI' },
         { status: 500 }
       );
     }
 
-    // Parse the text content from the response
+    // Parse response
+    console.log('=== Parsing Response ===');
     try {
-      const advisorsData: AdvisorResponse = JSON.parse(
-        response.content[0]?.type === 'text' ? response.content[0].text : '{}'
-      );
+      const rawText = response.content[0].text;
+      console.log('Raw text first 100 chars:', rawText.slice(0, 100));
+      console.log('Raw text last 100 chars:', rawText.slice(-100));
+
+      const advisorsData: AdvisorResponse = JSON.parse(rawText);
       
+      console.log('Successfully parsed JSON:', {
+        hasInitialJustification: !!advisorsData.initialJustification,
+        advisorsCount: advisorsData.advisors?.length,
+        hasFollowUp: !!advisorsData.followUp
+      });
+
       if (!advisorsData.advisors || !Array.isArray(advisorsData.advisors)) {
+        console.error('Invalid advisor data structure:', advisorsData);
         return NextResponse.json(
           { error: 'Invalid advisor data format' },
           { status: 500 }
@@ -167,26 +200,57 @@ Your response MUST be formatted as a valid JSON object with the following struct
         );
       }
 
+      // Call populate-extra-data to generate descriptions and voices
+      console.log('=== Calling populate-extra-data ===');
+      try {
+        const populateResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/populate-extra-data`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!populateResponse.ok) {
+          const errorData = await populateResponse.json().catch(() => ({}));
+          console.error('Failed to populate extra data:', errorData);
+        } else {
+          const populateResult = await populateResponse.json();
+          console.log('Successfully populated extra data:', populateResult);
+        }
+      } catch (populateError) {
+        console.error('Error calling populate-extra-data:', populateError);
+        // Don't fail the whole request if population fails
+      }
+
       // Return both the AI response and the inserted database rows
-      console.log('council members', insertedMembers, advisorsData)
+      console.log('council members', insertedMembers, advisorsData);
       return NextResponse.json({
         ...advisorsData,
         councilMembers: insertedMembers
       });
     } catch (parseError) {
-      console.error('JSON Parse Error:', 
-        response.content[0]?.type === 'text' ? response.content[0].text : 'No text content'
+      console.error('=== JSON Parse Error ===');
+      console.error('Error details:', parseError);
+      console.error('Raw text that failed to parse:', 
+        response.content[0].text
       );
       return NextResponse.json(
-        { error: 'Failed to parse AI response' },
+        { 
+          error: 'Failed to parse AI response',
+          details: parseError instanceof Error ? parseError.message : 'Unknown error'
+        },
         { status: 500 }
       );
     }
 
   } catch (error) {
-    console.error('Error in generate-advisors route:', error);
+    console.error('=== Route Error ===');
+    console.error('Error details:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
