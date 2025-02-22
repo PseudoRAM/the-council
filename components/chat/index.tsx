@@ -348,7 +348,7 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                     onClick={() => {
                       navigate.push("/update-council");
                     }}
-                    className="flex items-center justify-center gap-2 bg-[#e6a5ee] text-black rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#e883f5] transition-colors"
+                    className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                   >
                     Update council
                   </button>
