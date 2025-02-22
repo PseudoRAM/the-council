@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateVoiceWithId } from "@/utils/voice/elevenlabs";
 import { useRouter } from "next/navigation";
+import { AdvisorCard } from "../generate-council/AdvisorCard";
 
 const PLACEHOLDER_MESSAGES = [
   "Ask the council about your challenges...",
@@ -337,22 +338,14 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
             </div>
             <div className="flex flex-row gap-5 flex-wrap">
               {council.map((council, index) => (
-                <div
+                <AdvisorCard
                   key={index}
-                  className="flex flex-row gap-2 border p-2 rounded-lg w-52"
-                >
-                  <img
-                    src={council.image}
-                    alt={council.name}
-                    className="h-24 w-20 rounded-lg object-cover object-top flex-shrink-0"
-                  />
-                  <div className="flex flex-col w-full gap-1">
-                    <Badge className="w-fit ml-auto">Historical</Badge>
-                    <div className="text-right text-sm font-medium w-full">
-                      {council.name}
-                    </div>
-                  </div>
-                </div>
+                  advisor={{
+                    id: council.id,
+                    name: council.name,
+                    imageUrl: council.image,
+                  }}
+                />
               ))}
             </div>
             <button
