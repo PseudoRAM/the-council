@@ -34,6 +34,7 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
   const [messageQueue, setMessageQueue] = useState<Message[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const { recording, startRecording, stopRecording, text } = useRecordVoice();
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     if (text) {
@@ -42,8 +43,11 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
   }, [text]);
 
   const [speakingMemberId, setSpeakingMemberId] = useState<string | null>(null);
-  const [audioBuffers, setAudioBuffers] = useState<{ [key: string]: AudioBuffer }>({});
+  const [audioBuffers, setAudioBuffers] = useState<{
+    [key: string]: AudioBuffer;
+  }>({});
 
+  // Modify processMessageQueue to check voiceEnabled
   const processMessageQueue = useCallback(() => {
     if (messageQueue.length === 0) {
       setIsProcessingQueue(false);
@@ -54,20 +58,21 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
     setIsProcessingQueue(true);
     const nextMessage = messageQueue[0];
 
-    // Only play voice for council members' messages
-    if (nextMessage.senderId !== "user") {
+    // Only play voice for council members' messages if voice is enabled
+    if (nextMessage.senderId !== "user" && voiceEnabled) {
       const advisor = council.find((c) => c.id === nextMessage.senderId);
       if (advisor) {
         setSpeakingMemberId(advisor.id);
-        const audioBuffer = audioBuffers[`${nextMessage.senderId}-${nextMessage.content}`];
-        
+        const audioBuffer =
+          audioBuffers[`${nextMessage.senderId}-${nextMessage.content}`];
+
         if (audioBuffer) {
           const audioContext = new AudioContext();
           const source = audioContext.createBufferSource();
           source.buffer = audioBuffer;
           source.connect(audioContext.destination);
           source.start();
-      
+
           // Wait for audio to finish before processing next message
           return new Promise((resolve) => {
             source.onended = () => {
@@ -88,7 +93,7 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
               source.buffer = audioBuffer;
               source.connect(audioContext.destination);
               source.start();
-      
+
               return new Promise((resolve) => {
                 source.onended = () => {
                   setSpeakingMemberId(null);
@@ -111,10 +116,10 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
       }
     }
 
-    // For user messages or if no advisor found, process immediately
+    // For user messages or if no advisor found or voice disabled, process immediately
     setMessageQueue((prev) => prev.slice(1));
     setIsProcessingQueue(false);
-  }, [messageQueue, council, audioBuffers]);
+  }, [messageQueue, council, audioBuffers, voiceEnabled]);
 
   useEffect(() => {
     if (messageQueue.length > 0 && !isProcessingQueue) {
@@ -125,6 +130,7 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
   const { submit, isLoading, object } = experimental_useObject({
     api: "/api/chat",
     schema: responseSchema,
+    // Modify onFinish to check voiceEnabled before pre-loading audio
     onFinish({ object }) {
       if (object != null) {
         const newMessages = object.messages.map((m) => ({
@@ -133,26 +139,32 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
         }));
         setMessages((prev) => [...prev, ...newMessages]);
         setMessageQueue((prev) => [...prev, ...newMessages]);
-      
-        // Pre-load audio for council members' messages
-        newMessages.forEach(async (message) => {
-          if (message.senderId !== "user") {
-            const advisor = council.find((c) => c.id === message.senderId);
-            if (advisor) {
-              try {
-                const audioData = await generateVoiceWithId(message.content, advisor.voidId);
-                const audioContext = new AudioContext();
-                const audioBuffer = await audioContext.decodeAudioData(audioData);
-                setAudioBuffers((prev) => ({
-                  ...prev,
-                  [`${message.senderId}-${message.content}`]: audioBuffer,
-                }));
-              } catch (error) {
-                console.error("Error pre-loading voice:", error);
+
+        // Pre-load audio for council members' messages only if voice is enabled
+        if (voiceEnabled) {
+          newMessages.forEach(async (message) => {
+            if (message.senderId !== "user") {
+              const advisor = council.find((c) => c.id === message.senderId);
+              if (advisor) {
+                try {
+                  const audioData = await generateVoiceWithId(
+                    message.content,
+                    advisor.voidId
+                  );
+                  const audioContext = new AudioContext();
+                  const audioBuffer =
+                    await audioContext.decodeAudioData(audioData);
+                  setAudioBuffers((prev) => ({
+                    ...prev,
+                    [`${message.senderId}-${message.content}`]: audioBuffer,
+                  }));
+                } catch (error) {
+                  console.error("Error pre-loading voice:", error);
+                }
               }
             }
-          }
-        });
+          });
+        }
       }
     },
   });
@@ -240,17 +252,25 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                       <img
                         className={cn(
                           "w-8 h-8 rounded-lg object-top object-cover",
-                          speakingMemberId === message.senderId && "ring-2 ring-blue-500 animate-pulse"
+                          speakingMemberId === message.senderId &&
+                            "ring-2 ring-blue-500 animate-pulse"
                         )}
-                        src={council.find((c) => c.id === message.senderId)?.image}
-                        alt={council.find((c) => c.id === message.senderId)?.name}
+                        src={
+                          council.find((c) => c.id === message.senderId)?.image
+                        }
+                        alt={
+                          council.find((c) => c.id === message.senderId)?.name
+                        }
                       />
                     )}
                     <div
                       className={cn(
                         "flex flex-col max-w-[70%] rounded-xl p-3 space-y-1.5",
-                        message.senderId === "user" ? "bg-[#e6a5ee] text-black rounded-br-none" : "bg-gray-100 rounded-bl-none",
-                        speakingMemberId === message.senderId && "border-2 border-blue-500"
+                        message.senderId === "user"
+                          ? "bg-[#e6a5ee] text-black rounded-br-none"
+                          : "bg-gray-100 rounded-bl-none",
+                        speakingMemberId === message.senderId &&
+                          "border-2 border-blue-500"
                       )}
                     >
                       {message.senderId !== "user" && (
@@ -284,13 +304,27 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
               <h2 className="mb-5 sm:mb-10 text-xl text-center sm:text-5xl dark:text-white text-black">
                 Ask your council anything.
               </h2>
-              <PlaceholderInput
-                placeholders={PLACEHOLDER_MESSAGES}
-                onChange={handleInputChange}
-                onSend={() => {
-                  handleSendMessage(inputMessage);
-                }}
-              />
+              <div className="flex flex-col gap-3 w-full">
+                <PlaceholderInput
+                  placeholders={PLACEHOLDER_MESSAGES}
+                  onChange={handleInputChange}
+                  onSend={() => {
+                    handleSendMessage(inputMessage);
+                  }}
+                />
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm text-gray-500">Voice Response</span>
+                  <button
+                    onClick={() => setVoiceEnabled(!voiceEnabled)}
+                    className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    style={{ backgroundColor: voiceEnabled ? '#3b82f6' : '#6b7280' }}
+                  >
+                    <span
+                      className={`${voiceEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex flex-row gap-5 flex-wrap">
               {council.map((council, index) => (
@@ -315,6 +349,7 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
           </div>
         )}
         {messages.length > 0 && (
+          // Add voice toggle button in the input area
           <div className="flex gap-3 items-center">
             <input
               type="text"
@@ -324,6 +359,16 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
               placeholder="Type your message..."
               className="flex-1 rounded-lg object-top border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"
             />
+            <button
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              style={{ backgroundColor: voiceEnabled ? '#3b82f6' : '#6b7280' }}
+              title={voiceEnabled ? "Voice enabled" : "Voice disabled"}
+            >
+              <span
+                className={`${voiceEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </button>
             <button
               onClick={recording ? stopRecording : startRecording}
               className={`${recording ? "bg-red-500" : "bg-gray-500"} text-white rounded-lg object-top p-1.5 hover:opacity-80 transition-colors`}
