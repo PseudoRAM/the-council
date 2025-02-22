@@ -111,6 +111,8 @@ const QuestionnaireForm = () => {
     try {
       setIsLoading(true);
       setError(null);
+      setCurrentSection(-2); // Set to loading state first
+
       const formattedAnswers: FormattedAnswer[] = transformToFormattedData(answers);
       console.log('Formatted Answers:', formattedAnswers);
       await addResponsesToSupabase(formattedAnswers);
@@ -131,6 +133,7 @@ const QuestionnaireForm = () => {
       const data = await response.json();
       console.log('Generated Advisors Response:', data);
       setAdvisors(data);
+      setCurrentSection(-2);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -205,6 +208,7 @@ const QuestionnaireForm = () => {
     try {
       setIsLoading(true);
       setError(null);
+      setCurrentSection(-2);
       const formattedAnswers: FormattedAnswer[] = transformToFormattedData(shortcutData);
       const responses = await addResponsesToSupabase(formattedAnswers);
       console.log('Submitting shortcut data to supabase...', responses);
@@ -226,6 +230,7 @@ const QuestionnaireForm = () => {
       const data = await response.json();
       console.log('Generated Advisors Response:', data);
       setAdvisors(data);
+      setCurrentSection(-3);
       setShowResults(true); // Show results instead of changing section
 
     } catch (err) {
@@ -278,8 +283,13 @@ const QuestionnaireForm = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
 
-        {/* Add Advisors Section */}
+  if (currentSection === -3) {
+    return (
+      <div className="space-y-8">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <CardTitle className="text-2xl font-bold">Your Advisors</CardTitle>
@@ -328,11 +338,7 @@ const QuestionnaireForm = () => {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                No advisors generated yet. Click "Shortcut" to generate your advisory council.
-              </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -349,41 +355,23 @@ const QuestionnaireForm = () => {
     );
   }
 
-  if (showResults) {
+  if (currentSection === -2) {
     return (
       <div className="space-y-8">
-        {advisors && (
-          <Card className="max-w-3xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">Your Personal Advisory Council</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Initial Justification */}
-              <div className="mb-8">
-                <p className="text-gray-600">{advisors.initialJustification}</p>
-              </div>
-
-              {/* Advisors Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {advisors.advisors.map((advisor: Advisor, index: number) => (
-                  <AdvisorCard
-                    key={index}
-                    advisor={advisor}
-                    isSelected={selectedAdvisors.includes(advisor.id)}
-                    onSelect={() => handleAdvisorSelection(advisor.id)}
-                  />
-                ))}
-              </div>
-
-              {/* Follow-up Question */}
-              {advisors.followUp && (
-                <div className="mt-8">
-                  <p className="text-gray-600 italic">{advisors.followUp}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <Card className="max-w-3xl mx-auto mt-8">
+          <CardContent className="py-12">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <h3 className="text-xl font-semibold">Finding Your Council...</h3>
+              <p className="text-gray-600">
+                We're carefully analyzing your responses to assemble the perfect advisory council for you.
+              </p>
+              <p className="text-sm text-gray-500">
+                This usually takes about a minute.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
