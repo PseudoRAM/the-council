@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Mic } from "lucide-react"; // Add this import at the top
 
 export function PlaceholderInput({
   placeholders,
@@ -201,10 +202,20 @@ export function PlaceholderInput({
         value={value}
         type="text"
         className={cn(
-          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-20",
+          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-12 sm:pl-16 pr-20",
           animating && "text-transparent dark:text-transparent"
         )}
       />
+
+      <button
+        type="button"
+        onClick={() => {
+          // TODO: Add mic functionality here
+        }}
+        className="absolute left-1 sm:left-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full bg-black dark:bg-zinc-900 transition duration-200 flex items-center justify-center hover:bg-gray-800"
+      >
+        <Mic className="text-gray-300 h-4 w-4" />
+      </button>
 
       <button
         disabled={!value}
@@ -264,7 +275,7 @@ export function PlaceholderInput({
                 duration: 0.3,
                 ease: "linear",
               }}
-              className="dark:text-zinc-500 text-sm sm:text-base font-normal text-neutral-500 pl-4 sm:pl-12 text-left w-[calc(100%-2rem)] truncate"
+              className="dark:text-zinc-500 text-sm sm:text-base font-normal text-neutral-500 pl-12 sm:pl-16 text-left w-[calc(100%-2rem)] truncate"
             >
               {placeholders[currentPlaceholder]}
             </motion.p>
