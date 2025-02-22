@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
 import { generateImage } from "@/utils/images/generate-image";
 
+// Configure fal client with API key
+fal.config({
+  credentials: process.env.FAL_API_KEY,
+});
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,23 +19,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const imageUrl = await generateImage(name);
-
-    const imageResponse = await fetch(imageUrl);
-
-    if (!imageResponse.ok) {
-      throw new Error("Failed to fetch image");
+    if (!process.env.FAL_API_KEY) {
+      throw new Error('FAL_API_KEY is not configured')
     }
 
-    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageUrl = await generateImage(name);
 
-    return new Response(imageBuffer, {
-      headers: {
-        "Content-Type": "image/jpeg",
-      },
-    });
+    // Return the image URL in the response
+    return NextResponse.json({ imageUrl });
+
   } catch (error) {
     console.error("Image generation error:", error);
+    
+    // More detailed error response
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message.includes('not configured') ? 500 : 401 }
+      );
+    }
+    
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

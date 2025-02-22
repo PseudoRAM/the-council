@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ import { shortcutData } from './shortcut';
 
 type Answers = {
   [key: number]: {
-    title: string;
+    section: string;
     responses: {
       [key: number]: {
         question: string;
@@ -21,9 +21,17 @@ type Answers = {
   };
 };
 
-const transformToFormattedData = (answers: Answers) => {
+type FormattedAnswer = {
+  section: string;
+  responses: {
+    question: string;
+    answer: string;
+  }[];
+};
+
+const transformToFormattedData = (answers: Answers): FormattedAnswer[] => {
   return Object.entries(answers).map(([_, sectionData]) => ({
-    section: sectionData.title,
+    section: sectionData.section,
     responses: Object.values(sectionData.responses)
   }));
 };
@@ -34,7 +42,7 @@ const QuestionnaireForm = () => {
   const [answers, setAnswers] = useState<Answers>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [advisors, setAdvisors] = useState<any>(null); // Add state for advisors
+  const [advisors, setAdvisors] = useState<AdvisorResponse | null>(null);
 
   const sections = [
     {
@@ -85,7 +93,7 @@ const QuestionnaireForm = () => {
     setAnswers(prev => ({
       ...prev,
       [sectionIndex]: {
-        title: sections[sectionIndex].title,
+        section: sections[sectionIndex].title,
         responses: {
           ...prev[sectionIndex]?.responses,
           [questionIndex]: {
@@ -101,8 +109,9 @@ const QuestionnaireForm = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const formattedAnswers = transformToFormattedData(answers);
+      const formattedAnswers: FormattedAnswer[] = transformToFormattedData(answers);
       console.log('Formatted Answers:', formattedAnswers);
+      await addResponsesToSupabase(formattedAnswers);
       const response = await fetch('/api/generate-advisors', {
         method: 'POST',
         headers: {
@@ -129,12 +138,39 @@ const QuestionnaireForm = () => {
     }
   };
 
+  const addResponsesToSupabase = async (formattedAnswers: FormattedAnswer[]) => {
+    try {
+      const response = await fetch('/api/store-user-responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ formattedAnswers }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to save responses');
+      }
+
+      return result.data;
+    } catch (err) {
+      console.error('Error saving responses:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save responses');
+    }
+  };
+
+  const addAdvisorsToSupabase = async () => {
+  }
+
   const handleShortcut = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('Submitting shortcut data:', shortcutData);
+      const formattedAnswers: FormattedAnswer[] = transformToFormattedData(shortcutData);
+      const responses = await addResponsesToSupabase(formattedAnswers);
+      console.log('Submitting shortcut data to supabase...', responses);
 
       const response = await fetch('/api/generate-advisors', {
         method: 'POST',
