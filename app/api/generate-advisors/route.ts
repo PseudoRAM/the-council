@@ -18,6 +18,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { questionnaireData } = body;
 
+    if (!questionnaireData || !Array.isArray(questionnaireData)) {
+      return NextResponse.json(
+        { error: 'Invalid questionnaire data format' },
+        { status: 400 }
+      );
+    }
+
     // Format questionnaire data into a readable string
     const formattedQuestionnaire = questionnaireData.map((section: any) => {
       const responses = section.responses
@@ -82,15 +89,41 @@ Your response MUST be formatted as a valid JSON object with the following struct
       }]
     });
 
+    if (!response.content[0] || response.content[0].type !== 'text') {
+      return NextResponse.json(
+        { error: 'No response content from AI' },
+        { status: 500 }
+      );
+    }
+
     // Parse the text content from the response
-    const advisorsData = JSON.parse(response.content[0].type === "text" ? response.content[0].text : "");
-    console.log('Generated Advisors Response:', advisorsData);
-    return NextResponse.json(advisorsData);
+    try {
+      const advisorsData = JSON.parse(
+        response.content[0]?.type === 'text' ? response.content[0].text : '{}'
+      );
+      
+      if (!advisorsData.advisors || !Array.isArray(advisorsData.advisors)) {
+        return NextResponse.json(
+          { error: 'Invalid advisor data format' },
+          { status: 500 }
+        );
+      }
+      
+      return NextResponse.json(advisorsData);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', 
+        response.content[0]?.type === 'text' ? response.content[0].text : 'No text content'
+      );
+      return NextResponse.json(
+        { error: 'Failed to parse AI response' },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
     console.error('Error in generate-advisors route:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
