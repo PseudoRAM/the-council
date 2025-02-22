@@ -294,12 +294,10 @@ const QuestionnaireForm = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-gray-600">
-              We'll ask you a series of questions to understand you better and
-              create your personalized council of advisors.
+              We'll ask you a series of questions to understand you better and create your own personalized council of advisors.
             </p>
             <p className="text-center text-gray-600">
-              Take your time with each response - the more detailed and honest
-              you are, the better we can help you.
+              Take your time with each response - the more detailed and honest you are, the better.
             </p>
             <div className="flex justify-center mt-6 gap-4">
               <Button
@@ -342,9 +340,11 @@ const QuestionnaireForm = () => {
               <div>
                 {/* Initial Justification */}
                 <div className="mb-8">
-                  <p className="text-gray-600">
-                    {advisors.initialJustification}
-                  </p>
+                  <p className="text-gray-600">{advisors.initialJustification}</p>
+                  <br></br>
+                  <p className="text-gray-600">Now, from the depths of history, from the wilds of fiction, from the variety of what is and the infinity of what could be... we have drawn into existence TEN suitable advisors.</p>
+                  <br></br>
+                  <p className="text-gray-600">Please carefully select THREE to fill your council.</p>
                 </div>
 
                 {/* Advisors Grid */}

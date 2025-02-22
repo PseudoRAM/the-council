@@ -70,7 +70,7 @@ ${formattedQuestionnaire}
 
 Your response MUST be formatted as a valid JSON object with the following structure:
 {
-  "initialJustification": "A paragraph identifying key patterns from the responses",
+  "initialJustification": "2 sentences identifying key patterns about the user. Start with 'You are...' and then describe the key patterns you observe.",
   "advisors": [
     {
       "name": "Advisor Name",
