@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 interface AdvisorCardProps {
   advisor: {
@@ -26,13 +27,18 @@ export const AdvisorCard = ({
   return (
     <Card
       className={cn(
-        "h-full",
+        "h-full relative py-6",
         onSelect && "hover:shadow-lg transition-shadow cursor-pointer",
         isSelected && "ring-2 ring-primary"
       )}
       onClick={onSelect}
     >
-      <CardHeader className="space-y-1">
+      {isSelected && (
+        <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 transform transition-transform duration-200 ease-in-out">
+          <Check className="h-4 w-4" />
+        </div>
+      )}
+      <CardHeader className="space-y-1 py-0">
         <div className="flex items-center gap-4">
           <div className="relative h-14 w-12 rounded-xl overflow-hidden">
             {advisor.imageUrl && (
@@ -45,7 +51,7 @@ export const AdvisorCard = ({
           </div>
 
           <div className="flex-1">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-1">
               <CardTitle className="text-lg">{advisor.name}</CardTitle>
               {advisor.type && (
                 <Badge
@@ -54,7 +60,7 @@ export const AdvisorCard = ({
                   ${advisor.type === "fictional" && "bg-purple-100 text-purple-800"}
                   ${advisor.type === "archetypal" && "bg-green-100 text-green-800"}
                   ${advisor.type === "current" && "bg-yellow-100 text-yellow-800"}
-                  capitalize
+                  capitalize pointer-events-none  
                 `}
                 >
                   {advisor.type}
@@ -64,9 +70,11 @@ export const AdvisorCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <p className="text-sm text-gray-600">{advisor.why}</p>
-      </CardContent>
+      {advisor.why && (
+        <CardContent className="pb-0 pt-4">
+          <p className="text-sm text-gray-600">{advisor.why}</p>
+        </CardContent>
+      )}
     </Card>
   );
 };

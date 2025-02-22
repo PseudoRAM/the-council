@@ -336,16 +336,17 @@ export default function CouncilChatLayout({ council }: { council: COUNCIL }) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-row gap-5 flex-wrap">
+            <div className="flex flex-row gap-5 flex-wrap justify-center">
               {council.map((council, index) => (
-                <AdvisorCard
-                  key={index}
-                  advisor={{
-                    id: council.id,
-                    name: council.name,
-                    imageUrl: council.image,
-                  }}
-                />
+                <div key={index} className="w-[250px]">
+                  <AdvisorCard
+                    advisor={{
+                      id: council.id,
+                      name: council.name,
+                      imageUrl: council.image,
+                    }}
+                  />
+                </div>
               ))}
             </div>
             <button
