@@ -1,6 +1,6 @@
 export type AdvisorType = 'historical' | 'archetypal' | 'fictional' | 'current';
 
-export type Advisor = {
+export interface Advisor {
   id: string;
   name: string;
   type: AdvisorType;
@@ -9,16 +9,17 @@ export type Advisor = {
   traditions: string;
   speakingStyle: string;
   bestSuitedFor: string;
+  imageUrl?: string;
 }
 
-export type CouncilMember = {
+export interface CouncilMember {
   character_type: AdvisorType;
   created_at: string;
   description: string;
   generation_prompt: string | null;
   id: string;
   image_description: string | null;
-  image_url: string | null;
+  image_url?: string;
   is_active: boolean;
   name: string;
   properties: {

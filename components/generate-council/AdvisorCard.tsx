@@ -5,7 +5,17 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface AdvisorCardProps {
-  advisor: Advisor;
+  advisor: {
+    id: string;
+    type: string;
+    name: string;
+    description: string;
+    why: string;
+    traditions: string;
+    speakingStyle: string;
+    bestSuitedFor: string;
+    imageUrl?: string;
+  };
   isSelected: boolean;
   onSelect: () => void;
 }
@@ -22,13 +32,13 @@ export const AdvisorCard = ({ advisor, isSelected, onSelect }: AdvisorCardProps)
       <CardHeader className="space-y-1">
         <div className="flex items-center gap-4">
           <div className="relative h-12 w-12 rounded-full overflow-hidden">
-            <Image
-              src='/samples/head1.jpg'
-              alt={`Portrait of ${advisor.name}`}
-              fill
-              className="object-cover"
-              sizes="48px"
-            />
+            {advisor.imageUrl && (
+              <img 
+                src={advisor.imageUrl} 
+                alt={advisor.name}
+                className="w-full h-48 object-cover rounded-t-lg"
+              />
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between">

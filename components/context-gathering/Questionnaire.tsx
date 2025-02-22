@@ -325,7 +325,8 @@ const QuestionnaireForm = () => {
                         why: member.reason,
                         traditions: member.properties.traditions,
                         speakingStyle: member.properties.speakingStyle,
-                        bestSuitedFor: member.properties.bestSuitedFor
+                        bestSuitedFor: member.properties.bestSuitedFor,
+                        imageUrl: member.image_url
                       }}
                       isSelected={selectedAdvisors.includes(member.id)}
                       onSelect={() => handleAdvisorSelection(member.id)}
