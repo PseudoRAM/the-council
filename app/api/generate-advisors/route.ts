@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { AdvisorResponse } from '@/app/types/advisor';
+import { createClient } from '@/utils/supabase/server';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -17,6 +18,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { questionnaireData } = body;
+
+    if (!questionnaireData || !Array.isArray(questionnaireData)) {
+      return NextResponse.json(
+        { error: 'Invalid questionnaire data format' },
+        { status: 400 }
+      );
+    }
 
     // Format questionnaire data into a readable string
     const formattedQuestionnaire = questionnaireData.map((section: any) => {
@@ -65,8 +73,12 @@ Your response MUST be formatted as a valid JSON object with the following struct
   "advisors": [
     {
       "name": "Advisor Name",
+      "description": "A short description of the advisor",
       "type": "historical|archetypal|fictional|personal",
-      "why": "Explanation of why this advisor would be beneficial"
+      "why": "Explanation of why this advisor would be beneficial",
+      "traditions": "the traditions or concepts that the advisor embodies",
+      "speakingStyle": "the voice and speaking style of the advisor",
+      "bestSuitedFor": "the problems the advisor is most suited to solve"
     }
   ],
   "followUp": "A question about exploring or narrowing down the advisors"
@@ -82,15 +94,77 @@ Your response MUST be formatted as a valid JSON object with the following struct
       }]
     });
 
+    if (!response.content[0] || response.content[0].type !== 'text') {
+      return NextResponse.json(
+        { error: 'No response content from AI' },
+        { status: 500 }
+      );
+    }
+
     // Parse the text content from the response
-    const advisorsData = JSON.parse(response.content[0].type === "text" ? response.content[0].text : "");
-    console.log('Generated Advisors Response:', advisorsData);
-    return NextResponse.json(advisorsData);
+    try {
+      const advisorsData: AdvisorResponse = JSON.parse(
+        response.content[0]?.type === 'text' ? response.content[0].text : '{}'
+      );
+      
+      if (!advisorsData.advisors || !Array.isArray(advisorsData.advisors)) {
+        return NextResponse.json(
+          { error: 'Invalid advisor data format' },
+          { status: 500 }
+        );
+      }
+      
+      // Add database operations
+      const supabase = await createClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        return NextResponse.json({ 
+          error: 'Unauthorized' 
+        }, { status: 401 });
+      }
+      
+      const councilMembers = advisorsData.advisors.map((advisor: any) => ({
+        user_id: user.id,
+        name: advisor.name,
+        character_type: advisor.type,
+        reason: advisor.why,
+        description: advisor.description,
+        properties: {
+          traditions: advisor.traditions,
+          speakingStyle: advisor.speakingStyle,
+          bestSuitedFor: advisor.bestSuitedFor
+        }
+      }));
+
+      const { error: dbError } = await supabase
+        .from('council_members')
+        .insert(councilMembers);
+
+      if (dbError) {
+        console.error('Database insertion error:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to save advisors' },
+          { status: 500 }
+        );
+      }
+
+      // Keep original response
+      return NextResponse.json(advisorsData);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', 
+        response.content[0]?.type === 'text' ? response.content[0].text : 'No text content'
+      );
+      return NextResponse.json(
+        { error: 'Failed to parse AI response' },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
     console.error('Error in generate-advisors route:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

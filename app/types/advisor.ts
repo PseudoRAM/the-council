@@ -4,6 +4,10 @@ export type Advisor = {
   name: string;
   type: AdvisorType;
   why: string;
+  description: string;
+  traditions: string;
+  speakingStyle: string;
+  bestSuitedFor: string;
 }
 
 export type AdvisorResponse = {
