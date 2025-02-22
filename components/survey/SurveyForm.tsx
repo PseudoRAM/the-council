@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSurvey } from './SurveyContext';
-import QuestionCard from './QuestionCard';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { questions } from '@/data/survey-questions';
@@ -93,24 +92,6 @@ export default function SurveyForm() {
           Question {state.progress.currentStep + 1} of {questions.length}
         </span>
       </div>
-
-      <QuestionCard 
-        question={currentQuestion}
-        answer={state.progress.answers[currentQuestion.id]}
-        onAnswer={(answer) => {
-          dispatch({
-            type: 'SET_ANSWER',
-            payload: {
-              questionId: currentQuestion.id,
-              answer: {
-                questionId: currentQuestion.id,
-                value: answer,
-                lastModified: new Date(),
-              },
-            },
-          });
-        }}
-      />
 
       <div className="flex justify-between mt-8">
         <Button

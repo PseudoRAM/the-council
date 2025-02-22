@@ -123,7 +123,7 @@ function validateResponse(data: any): data is ElevenLabsResponse {
     return false;
   }
 
-  if (!data.previews?.length > 0 && !data.error) {
+  if ((!data.previews || data.previews.length === 0) && !data.error) {
     console.error('Response missing both previews and error:', data);
     return false;
   }
