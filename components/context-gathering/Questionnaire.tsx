@@ -8,75 +8,70 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 type Answers = {
   [key: number]: {
-    [key: number]: string;
+    title: string;
+    responses: {
+      [key: number]: {
+        question: string;
+        answer: string;
+      };
+    };
   };
+};
+
+const transformToFormattedData = (answers: Answers) => {
+  return Object.entries(answers).map(([_, sectionData]) => ({
+    section: sectionData.title,
+    responses: Object.values(sectionData.responses)
+  }));
 };
 
 const QuestionnaireForm = () => {
   const [currentSection, setCurrentSection] = useState(-1); // -1 for welcome screen
   const [answers, setAnswers] = useState<Answers>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sections = [
     {
-      title: "Biography",
+      title: "Personal Context",
       questions: [
-        "What is your current age and gender?",
-        "Where are you from?",
-        "Where do you live now, and how do you feel about it? Where else have you lived?",
-        "What is your current occupation, and how do you feel about it? What else have you done for work?",
-        "What has your education looked like?"
+        "What is your current age, location, and primary occupation?",
+        "What's the most significant change you're currently navigating in your life (career, relationships, personal growth, etc.)?"
       ]
     },
     {
-      title: "People",
+      title: "Relationships & Social Dynamics",
       questions: [
-        "Describe the basic shape of your family and how you tend to relate to them.",
-        "Describe your current social circle(s). Who do you spend most of your time with?",
-        "Who are the people who energize you the most? Why?",
-        "Which relationships would you like to develop or strengthen?",
-        "Who are your mentors or role models in your immediate life?",
-        "In what social contexts do you feel most alive?"
+        "Who are the three people who most energize or inspire you, and what quality in each of them resonates with you?",
+        "In what social contexts or relationships do you feel most alive and authentic?"
       ]
     },
     {
-      title: "Values & Preferences",
+      title: "Values & Identity",
       questions: [
-        "Name an aspect of the world—a thing, a place, an experience—that consistently delights you.",
-        "What do you find beautiful?",
-        "Are there any traditions or philosophies that really click with how you approach life?",
-        "What's something other people do, that you never do?"
+        "Name three things (experiences, places, activities) that consistently bring you joy or satisfaction. Why?",
+        "What's a strong conviction or approach to life that sets you apart from others?"
       ]
     },
     {
-      title: "Inspiration",
+      title: "Inspiration & Models",
       questions: [
-        "Name three real people, living or dead, who you find inspiring. What do you admire about each of them?",
-        "Name three fictional characters you resonate with, and say what feels notable about each of them.",
-        "What archetypal figures (e.g., The Sage, The Creator, The Explorer) do you most identify with? Why?",
-        "What books, articles, talks, or works of art have significantly influenced your worldview?"
+        "Name one real person and one fictional character you deeply resonate with. What specific qualities in each speak to you?",
+        "What book, philosophy, or piece of wisdom has most shaped how you see the world and why?"
       ]
     },
     {
-      title: "Personality",
+      title: "Growth & Aspirations",
       questions: [
-        "What personality frameworks (e.g. Myers-Briggs, Enneagram) have you found helpful in understanding yourself?",
-        "What type(s) do you identify with in those frameworks and why?",
-        "What kind of animal do you most feel like / would you like to be?",
-        "What descriptions of you from friends and family have struck a chord?"
+        "What specific quality or capability would you most like to develop in yourself over the next year?",
+        "Describe your ideal day three years from now - what would you be doing, and more importantly, who would you be being?"
       ]
     },
     {
-      title: "Direction",
+      title: "Self-Understanding",
       questions: [
-        "Who do you want to become in the next 5-10 years?",
-        "What skills or qualities would you like to develop?",
-        "What would be a wildly good outcome of an advisor conversation for you?"
-      ]
-    },
-    {
-      title: "Additional Thoughts",
-      questions: [
-        "Anything else you want to mention?"
+        "What's the most insightful feedback you've received about yourself from others?",
+        "Complete this sentence: \"People who know me well would say I'm the kind of person who...\""
       ]
     }
   ];
@@ -85,16 +80,48 @@ const QuestionnaireForm = () => {
     setAnswers(prev => ({
       ...prev,
       [sectionIndex]: {
-        ...prev[sectionIndex],
-        [questionIndex]: value
+        title: sections[sectionIndex].title,
+        responses: {
+          ...prev[sectionIndex]?.responses,
+          [questionIndex]: {
+            question: sections[sectionIndex].questions[questionIndex],
+            answer: value
+          }
+        }
       }
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('Final answers:', answers);
-    // Here you would typically send the data to your backend/LLM
-  };
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      const formattedAnswers = transformToFormattedData(answers);
+
+      const response = await fetch('/api/generate-advisors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionnaireData: formattedAnswers
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate advisors');
+      }
+
+      const data = await response.json();
+      console.log('Advisors generated:', data);
+      // Handle the response (e.g., store in state, navigate to results page)
+
+    } catch (error) {
+      console.error('Error:', error);
+      // Handle error (show error message to user)
+    } finally {
+      setIsLoading(false);
+    }
+  }; Q
 
   if (currentSection === -1) {
     return (
@@ -136,7 +163,7 @@ const QuestionnaireForm = () => {
               {question}
             </label>
             <Textarea
-              value={answers[currentSection]?.[qIndex] || ''}
+              value={answers[currentSection]?.responses?.[qIndex]?.answer || ''}
               onChange={(e) => handleAnswerChange(currentSection, qIndex, e.target.value)}
               rows={4}
               className="w-full"
