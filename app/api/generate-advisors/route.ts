@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { AdvisorResponse } from '@/app/types/advisor';
 import { createClient } from '@/utils/supabase/server';
+import { generateImage } from '@/utils/images/generate-image';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -113,6 +114,16 @@ Your response MUST be formatted as a valid JSON object with the following struct
           { status: 500 }
         );
       }
+
+      // Generate images for each advisor
+      const images = await Promise.all(advisorsData.advisors.map(async (advisor: any) => {
+        const imageUrl = await generateImage(advisor.name);
+        return {
+          name: advisor.name,
+          imageUrl: imageUrl
+        };
+      }));  
+
       
       // Add database operations
       const supabase = await createClient();
@@ -124,18 +135,24 @@ Your response MUST be formatted as a valid JSON object with the following struct
         }, { status: 401 });
       }
       
-      const councilMembers = advisorsData.advisors.map((advisor: any) => ({
-        user_id: user.id,
-        name: advisor.name,
-        character_type: advisor.type,
-        reason: advisor.why,
-        description: advisor.description,
-        properties: {
-          traditions: advisor.traditions,
-          speakingStyle: advisor.speakingStyle,
-          bestSuitedFor: advisor.bestSuitedFor
-        }
-      }));
+      const councilMembers = advisorsData.advisors.map((advisor: any) => {
+        // Find the matching image for this advisor
+        const advisorImage = images.find(img => img.name === advisor.name);
+        
+        return {
+          user_id: user.id,
+          name: advisor.name,
+          character_type: advisor.type,
+          reason: advisor.why,
+          description: advisor.description,
+          image_url: advisorImage?.imageUrl || null, // Add the image URL to the database record
+          properties: {
+            traditions: advisor.traditions,
+            speakingStyle: advisor.speakingStyle,
+            bestSuitedFor: advisor.bestSuitedFor
+          }
+        };
+      });
 
       const { data: insertedMembers, error: dbError } = await supabase
         .from('council_members')
