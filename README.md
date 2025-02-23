@@ -8,14 +8,19 @@ council.ai is your personal AI advisory council. It creates a personalized counc
 
 council.ai brings together LLMs, voice models, and image generation to create an immersive and personalized advisory experience. The platform generates a diverse panel of advisors - ranging from historical figures to fictional characters - each bringing their unique perspective and wisdom to help users navigate life's challenges and opportunities.
 
+## Demo
+
+[Demo Video](https://youtu.be/VV4KOicuIdI)
+
 ## Features
 
 - **Personalized Council Generation**: Based on your responses to a comprehensive questionnaire, the system creates a custom panel of advisors uniquely suited to your needs
 - **Interactive Conversations**: Engage in meaningful dialogue with your council through a chat interface
 - **Rich Multimedia Experience**:
   - AI-generated images of your advisors using Fal AI flux-lora
-  - Unique voice synthesis for each advisor using ElevenLabs
-  - Voice cloning capabilities for authentic advisor interactions
+  - Unique voice synthesis for each advisor using ElevenLabs Voice Design API
+  - TTS API with ElevenLabs with custom voice for authentic advisor interactions
+    (Note: To get around ElevenLabs voice design copyright issues (i.e. you can't mention a specific person in the prompt), we use ask Claude to generate detailed information about what a given characters voice would sound like and feed that into the voice design API)
 
 ## Tech Stack
 
@@ -25,6 +30,7 @@ council.ai brings together LLMs, voice models, and image generation to create an
 - **AI Services**:
   - Anthropic Claude for advisor generation and reasoning
   - OpenAI GPT-4 for conversation
+  - Whisper API for audio transcription
   - ElevenLabs for text-to-speech and voice design
   - Fal AI flux-lora for image generation
 
